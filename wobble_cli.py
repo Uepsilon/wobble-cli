@@ -37,24 +37,29 @@ def enforce_credentials():
 
 def archive_topics(days):
     try:
-        wobble_service = WobbleService(api_endpoint=environ['WOBBLE_SERVER_URL'])
-    except KeyError:
-        wobble_service = WobbleService()
+        try:
+            wobble_service = WobbleService(api_endpoint=environ['WOBBLE_SERVER_URL'])
+        except KeyError:
+            wobble_service = WobbleService()
 
-    with wobble_service.connect(environ['WOBBLE_USERNAME'],
-                                environ['WOBBLE_PASSWORD']) as service:
-        today = datetime.date.today()
-        threashhold = today - datetime.timedelta(days=int(days))
+        with wobble_service.connect(environ['WOBBLE_USERNAME'],
+                                    environ['WOBBLE_PASSWORD']) as service:
+            today = datetime.date.today()
+            threashhold = today - datetime.timedelta(days=int(days))
 
-        topics = service.topics_list()
-        for topic in topics['topics']:
-            last_touch = datetime.datetime.fromtimestamp(topic['max_last_touch'])
-            last_touch = last_touch.date()
-            if last_touch < threashhold:
-                abstract = BeautifulSoup(topic['abstract']).get_text()
-                service.archive_topic(topic['id'])
-                logging.info("{}\tid:{}\t-> archived".format(
-                                abstract, topic['id']))
+            topics = service.topics_list()
+
+            for topic in topics['topics']:
+                last_touch = datetime.datetime.fromtimestamp(topic['max_last_touch'])
+                last_touch = last_touch.date()
+                if last_touch < threashhold:
+                    abstract = BeautifulSoup(topic['abstract']).get_text()
+                    service.archive_topic(topic['id'])
+                    logging.info("{}\tid:{}\t-> archived".format(
+                                    abstract, topic['id']))
+
+    except WobbleService.ProtocolError as e:
+        print e.value
 
 
 if __name__ == '__main__':
